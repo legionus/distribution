@@ -72,7 +72,6 @@ func (imh *imageManifestHandler) annotatedTag(oci bool) string {
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("\n\nGetting a manifest!\n\n\n")
 	supportsSchema2 := false
 	supportsManifestList := false
 	supportsOCISchema := false
@@ -109,14 +108,12 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		desc, err := tags.Get(imh, imh.annotatedTag(supportsOCI))
 		if err != nil {
 			if _, ok := err.(distribution.ErrTagUnknown); !ok {
-				fmt.Printf("\n\nXXX: %T: %v\n\n\n", err, err)
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 				return
 			}
 			if supportsOCI {
 				desc, err = tags.Get(imh, imh.annotatedTag(false))
 				if err != nil {
-					fmt.Printf("\n\nXXX: %T: %v\n\n\n", err, err)
 					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 					return
 				}
@@ -152,20 +149,11 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		{isAnOCIManifest, !supportsOCISchema && supportsSchema2},
 		{isAnOCIManifestList, !supportsOCIManifestList && supportsManifestList},
 	}
-	for i, combo := range badCombinations {
+	for _, combo := range badCombinations {
 		if combo[0] && combo[1] {
-			fmt.Printf("\n\nbad combo! %d\n\n\n", i)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-	}
-
-	if isAnOCIManifest {
-		fmt.Print("\n\nreturning OCI manifest\n\n")
-	} else if isSchema2 {
-		fmt.Print("\n\nreturning schema 2\n\n")
-	} else {
-		fmt.Print("\n\nwell I guess this is a schema1 manifest\n\n")
 	}
 
 	// Only rewrite schema2 manifests when they are being fetched by tag.
@@ -223,8 +211,6 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(p)
-
-	fmt.Printf("\n\nThey succeeded!\n\n\n")
 }
 
 func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
@@ -309,12 +295,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 	isAnOCIManifest := mediaType == schema2.MediaTypeOCIManifest || mediaType == manifestlist.MediaTypeOCIManifestList
 
-	if isAnOCIManifest {
-		fmt.Printf("\n\nThey're putting an OCI Manifest!\n\n\n")
-	} else {
-		fmt.Printf("\n\nThey're putting a Docker Manifest!\n\n\n")
-	}
-
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
 		options = append(options, distribution.WithTag(imh.annotatedTag(isAnOCIManifest)))
@@ -324,12 +304,10 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		if err == distribution.ErrUnsupported {
-			fmt.Printf("\n\nXXX 1\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 			return
 		}
 		if err == distribution.ErrAccessDenied {
-			fmt.Printf("\n\nXXX 2\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied)
 			return
 		}
@@ -357,7 +335,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
 
-		fmt.Printf("\n\nXXX 3\n\n\n")
 		return
 	}
 
@@ -366,7 +343,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		tags := imh.Repository.Tags(imh)
 		err = tags.Tag(imh, imh.annotatedTag(isAnOCIManifest), desc)
 		if err != nil {
-			fmt.Printf("\n\nXXX 4: %T: %v\n\n\n", err, err)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
 		}
@@ -376,7 +352,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	// Construct a canonical url for the uploaded manifest.
 	ref, err := reference.WithDigest(imh.Repository.Named(), imh.Digest)
 	if err != nil {
-		fmt.Printf("\n\nXXX 5\n\n\n")
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -392,8 +367,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Location", location)
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.WriteHeader(http.StatusCreated)
-
-	fmt.Printf("\n\nThey succeeded!\n\n\n")
 }
 
 // DeleteImageManifest removes the manifest with the given digest from the registry.

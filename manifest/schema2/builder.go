@@ -1,8 +1,6 @@
 package schema2
 
 import (
-	"fmt"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 )
@@ -57,8 +55,6 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	}
 	copy(m.Layers, mb.layers)
 
-	fmt.Printf("\n\nbuilding image type %d\n\n\n", mb.imageType)
-
 	// Add config to the blob store
 	var configType string
 	switch mb.imageType {
@@ -88,8 +84,6 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 			l.MediaType = MediaTypeOCILayer
 		}
 	}
-
-	fmt.Printf("\n\ndone building\n\n\n")
 
 	return FromStruct(m)
 }
