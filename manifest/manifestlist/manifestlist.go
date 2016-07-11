@@ -23,7 +23,7 @@ const (
 // packages version of the manifest.
 var SchemaVersion = manifest.Versioned{
 	SchemaVersion: 2,
-	MediaType:     MediaTypeOCIManifestList,
+	MediaType:     MediaTypeManifestList,
 }
 
 func init() {

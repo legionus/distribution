@@ -42,7 +42,7 @@ var (
 	// packages version of the manifest.
 	SchemaVersion = manifest.Versioned{
 		SchemaVersion: 2,
-		MediaType:     MediaTypeOCIManifest,
+		MediaType:     MediaTypeManifest,
 	}
 )
 
