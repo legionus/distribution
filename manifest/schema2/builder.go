@@ -55,31 +55,42 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	}
 	copy(m.Layers, mb.layers)
 
+	configDigest := digest.FromBytes(mb.configJSON)
+
 	// Add config to the blob store
-	var configType string
-	switch mb.imageType {
-	case DockerImageType:
-		configType = MediaTypeConfig
-	case OciImageType:
-		configType = MediaTypeOCIConfig
+	var configMediaType string
+
+	if mb.imageType == OciImageType {
+		configMediaType = MediaTypeOCIConfig
+	} else {
+		configMediaType = MediaTypeConfig
 	}
 
 	var err error
-	m.Config, err = mb.bs.Put(ctx, configType, mb.configJSON)
+	m.Config, err = mb.bs.Stat(ctx, configDigest)
+	switch err {
+	case nil:
+		// Override MediaType, since Put always replaces the specified media
+		// type with application/octet-stream in the descriptor it returns.
+		m.Config.MediaType = configMediaType
+		return FromStruct(m)
+	case distribution.ErrBlobUnknown:
+		// nop
+	default:
+		return nil, err
+	}
+
+	// Add config to the blob store
+	m.Config, err = mb.bs.Put(ctx, configMediaType, mb.configJSON)
+	// Override MediaType, since Put always replaces the specified media
+	// type with application/octet-stream in the descriptor it returns.
+	m.Config.MediaType configMediaType
 	if err != nil {
 		return nil, err
 	}
 
-	switch mb.imageType {
-	case DockerImageType:
-		m.MediaType = MediaTypeManifest
-		m.Config.MediaType = MediaTypeConfig
-		for _, l := range m.Layers {
-			l.MediaType = MediaTypeLayer
-		}
-	case OciImageType:
+	if mb.imageType == OciImageType {
 		m.MediaType = MediaTypeOCIManifest
-		m.Config.MediaType = MediaTypeOCIConfig
 		for _, l := range m.Layers {
 			l.MediaType = MediaTypeOCILayer
 		}
